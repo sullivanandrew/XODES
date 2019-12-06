@@ -1,0 +1,174 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\documentclass{article}
+
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{bm}
+\usepackage{dcolumn}
+\usepackage{graphicx}
+\usepackage{graphics}
+\usepackage[latin1]{inputenc}
+\usepackage{latexsym}
+\usepackage{rotating}
+\usepackage{url}
+\usepackage{xspace}
+\usepackage[usenames]{color}
+\usepackage{mathrsfs}
+\usepackage{hyperref}
+\usepackage{epstopdf}
+\usepackage{verbatim}
+\usepackage{authblk}
+\usepackage{tensor}
+\usepackage[margin=1.0in]{geometry}
+\usepackage[scientific-notation=true]{siunitx}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newcommand{\be}{\begin{equation}}
+\newcommand{\ee}{\end{equation}}
+\newcommand{\bal}{\begin{align}}
+%\end{align} command not allowed by LaTex syntax
+\newcommand{\bsp}{\begin{split}}
+\newcommand{\esp}{\end{split}}
+
+\newcommand{\GR}{{\mbox{\tiny GR}}}
+\newcommand{\Hz}{{\mbox{\tiny H}}}
+\newcommand{\new}{{\mbox{\tiny new}}}
+\newcommand{\old}{{\mbox{\tiny old}}}
+\newcommand{\eff}{{\mbox{\tiny eff}}}
+\newcommand{\nonlin}{{\mbox{\tiny nonlin}}}
+\newcommand{\ISCO}{{\mbox{\tiny ISCO}}}
+\newcommand{\LR}{{\mbox{\tiny LR}}}
+
+\newcommand{\bw}{\begin{widetext}}
+\newcommand{\ew}{\end{widetext}}
+
+\newcommand{\nn}{\nonumber}
+\newcommand{\ph}{\phantom{n}}
+\newcommand{\pd}{\partial}
+\newcommand{\cd}{\nabla}
+\newcommand{\tn}{\tensor}
+\newcommand{\tnst}{\tensor*}
+
+\newcommand{\ssqth}{\sin^2{\theta}}
+\newcommand{\csqth}{\cos^2{\theta}}
+
+\newcommand{\ext}{\mathrm{ext}}
+\newcommand{\inter}{\mathrm{int}}
+\newcommand{\mcl}{\mathcal}
+
+\newcommand{\mrm}{\mathrm}
+\newcommand{\rarr}{\rightarrow}
+\newcommand{\larr}{\leftarrow}
+
+\newcommand{\lb}{\left(}
+\newcommand{\rb}{\right)}
+\newcommand{\lcb}{\left\{}
+\newcommand{\rcb}{\right\}}
+\newcommand{\lsb}{\left[}
+\newcommand{\rsb}{\right]}
+\newcommand{\ld}{\left.}
+\newcommand{\rd}{\right.}
+
+\newcommand{\red}[1]{\textcolor{red}{#1}}
+\newcommand{\as}[1]{\textcolor{cyan}{#1}}
+\newcommand{\blue}[1]{\textcolor{blue}{#1}}
+\newcommand{\ny}[1]{\textcolor{blue}{\it{\textbf{ny: #1}}}\xspace}
+
+\newcommand{\efun}{\mathrm{(exp)}}
+\newcommand{\lin}{\mathrm{(lin)}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+\title{eXtreme Ordinary Differential Equation Solver}
+
+\author{Andrew Sullivan}
+\affil{Department of Physics, Montana State University, Bozeman, MT 59717, USA.}
+
+\date{\today}
+
+\maketitle
+
+This is the documentation of the eXtreme Ordinary Differential Equation Solver (XODES) as detailed in arxiv:1903.02624. This includes an overview of each component and the necessary steps to compile and execute the program. For any questions, contact Andrew Sullivan at andrew.sullivan4@montana.edu.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Folder Structure}
+\label{sec:folderstruct}
+
+The XODES folder is structured as such:
+
+\begin{itemize}
+\item Code
+\begin{itemize}
+\item BVP\_BICO.c: BICOnjugate Gradient Method
+\item BVP\_control.c: Main loop controller for Newton-Raphson method.
+\item BVP\_GMRES.c: GEneralized RESidual Method
+\item BVP\_gridsize.c: Grid adjustment and interpolation.
+\item BVP\_header.h: Main header file.
+\item BVP\_IC.c: Initial conditions.
+\item BVP\_LUdcmop.c: LU Decomposition Method.
+\item BVP\_out.c: Output generator. Output solution to directory `Data/BVPout\_sols/Sol\_Funcs/'
+\item BVP\_physics.c: Extract physical observables. Outputs observable parameters to directory \\`Data/BVPout\_sols/Sol\_Props/'.
+\item BVP\_sys.c: System residual and Jacobian evaluation.
+\item BVP.c: Main file to initialize executable variables.
+\end{itemize}
+\item Documentation
+\begin{itemize}
+\item Documentation File
+\item Linear Solvers.pdf: Documentation of the linear solver algorithms, LU decomposition, Biconjugate gradient stabilized, and generalized residual method. 
+\end{itemize}
+\item Execs
+\begin{itemize}
+\item BVP.exe: Main executable
+\end{itemize}
+\item Funcs
+\begin{itemize}
+\item FEqEEPSIout.c: C file with procedurally generated function declarations of the scalar field equation and its partial derivatives that is \#included in the C header file.
+\item FEqEERRout.c:  C file with procedurally generated function declarations of the r-r component of modified Einstein equation and its partial derivatives that is \#included in the C header file.
+\item FEqEETTout.c:  C file with procedurally generated function declarations of the t-t component of modified Einstein equation and its partial derivatives that is \#included in the C header file.
+\item FEqISCOLRout.c:  C file with procedurally generated function declarations of the differential equation that governs the location of the ISCO and light ring that is \#included in the C header file.
+\end{itemize}
+\item Gens
+\begin{itemize}
+\item Maple\_Export Folder
+\begin{itemize}
+\item This folder contains the Maple field equation calculation and export. Filenames have the structure ``FE\_THEORY\_export.mw". It creates the C-files in `Funcs' folder.
+\end{itemize}
+\end{itemize}
+\item BVPcompile.sh: Bash compile file
+\item BVPbatch.sh: Bash executable file
+\end{itemize}
+
+
+
+%----------------------------------------
+\subsection{Compilation Pipeline}
+\label{ssec:exec}
+
+The complete step-by-step process is:
+
+\begin{enumerate}
+\item Execute Maple worksheet of modified Einstein equations of interest. (Crtl+Shift+Enter executes entire Maple worksheet). This will calculate the modified Einstein equations and procedurally calculate and export each component and its partial derivatives. Then it will export the results to the `FEqEETTout.c', `FEqEERRout.c', `FEqEEPSIout.c' C-files. Alternatively, one can simply copy-paste these already generated files for each coupling function located in the folders `Funcs-LinCoupling' and `Funcs-ExpCoupling' respectively.
+\item Execute Maple worksheet of ISCO and light ring differential equation calculation. This will calculate and export the two differential equations to the `FEqISCOLRout.c' C-file. Alternatively, one can simply use the already generated file located in the `Funcs' folder.
+\item The `BVPcompile.sh' bash script will gcc compile the program to the `BVP.exe' executable located in the `Execs' folder.
+\item Execute program with `BVPbatch.sh' to determine inputs. This will also automatically remove and create the directories `Data/BVPout\_sols' where the solution and physical observables are located.
+\end{enumerate}
+
+There are 5 inputs of the executable `BVP.exe \{1\} \{2\} \{3\} \{4\} \{5\}':
+\begin{enumerate}
+\item \{1\}: Coupling parameter $\alpha$, entered as $\alpha = 10^{-5} \{1\}$. For example, to enter $\alpha = 0.001$, $\{1\} = 100$.
+\item \{2\}: Desired tolerance, entered as $\mathrm{tol} = 10^{\{2\}}$. For example, to enter $\mathrm{tol} = 10^{-5}$, $\{2\} = -5$.
+\item \{3\}: Number of grid points, entered as $n = \{3\}$.
+\item \{4\}: Newton polynomial order, $r = \{4\}$.
+\item \{5\}: Horizon radius parameter, $r_{\Hz} = \{5\}$.
+\end{enumerate}
+As an example, to execute for a coupling value $\alpha = 0.001$, tolerance $\mathrm{tol} = 10^{-5}$, $n = 101$ grid points, Newton polynomial order $r = 12$ and a horizon radius $r_{\Hz} = 1.0$: enter `BVP.exe 100 -5 101 12 1.0'
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\end{document}
+
